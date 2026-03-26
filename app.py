@@ -5,20 +5,88 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+# ── Global Plotly dark theme ──────────────────────────────────────────────────
+import plotly.io as pio
+pio.templates["custom_dark"] = go.layout.Template(
+    layout=go.Layout(
+        paper_bgcolor="rgba(15,12,41,0.0)",
+        plot_bgcolor="rgba(255,255,255,0.04)",
+        font=dict(color="#E0E0E0", family="Inter"),
+        title=dict(font=dict(color="#00BFFF", size=15)),
+        xaxis=dict(gridcolor="rgba(255,255,255,0.08)", linecolor="rgba(255,255,255,0.15)",
+                   tickfont=dict(color="#B0B0B0")),
+        yaxis=dict(gridcolor="rgba(255,255,255,0.08)", linecolor="rgba(255,255,255,0.15)",
+                   tickfont=dict(color="#B0B0B0")),
+        legend=dict(bgcolor="rgba(255,255,255,0.05)", bordercolor="rgba(255,255,255,0.1)"),
+        colorway=["#00BFFF","#FF6EC7","#7DF9FF","#FFD700","#39FF14","#FF4500","#BF5FFF"],
+    )
+)
+pio.templates.default = "custom_dark"
+
+
 st.set_page_config(page_title="E-Commerce EDA Dashboard", layout="wide", page_icon="🛒")
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main { background-color: #f8f9fa; }
-    .block-container { padding-top: 1rem; }
-    h1 { color: #1F4E79; font-family: Arial; }
-    h2 { color: #2E75B6; font-family: Arial; }
-    h3 { color: #7B2D8B; font-family: Arial; }
-    .stMetric { background: white; border-radius: 10px; padding: 10px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    .insight-box { background: #EAF4FB; border-left: 5px solid #2E75B6;
-                   padding: 12px 16px; border-radius: 4px; margin: 6px 0; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        font-family: 'Inter', sans-serif;
+    }
+    .main .block-container {
+        background: rgba(255,255,255,0.04);
+        border-radius: 18px;
+        padding: 2rem 2.5rem;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    h1 { color: #00BFFF !important; font-family: 'Inter', sans-serif !important;
+         font-size: 2.2rem !important; font-weight: 700 !important;
+         text-shadow: 0 0 20px rgba(0,191,255,0.4); }
+    h2 { color: #7DF9FF !important; font-family: 'Inter', sans-serif !important;
+         font-weight: 600 !important; border-bottom: 2px solid rgba(0,191,255,0.3);
+         padding-bottom: 6px; }
+    h3 { color: #FF6EC7 !important; font-family: 'Inter', sans-serif !important;
+         font-weight: 600 !important; }
+    p, li, span, div, label { color: #E0E0E0 !important; }
+
+    [data-testid="metric-container"] {
+        background: linear-gradient(145deg, rgba(0,191,255,0.15), rgba(125,249,255,0.07));
+        border: 1px solid rgba(0,191,255,0.35);
+        border-radius: 14px;
+        padding: 14px 18px;
+        box-shadow: 0 4px 20px rgba(0,191,255,0.15);
+        transition: transform 0.2s;
+    }
+    [data-testid="metric-container"]:hover { transform: translateY(-3px); }
+    [data-testid="stMetricLabel"] p {
+        color: #7DF9FF !important; font-weight: 600 !important;
+        font-size: 0.8rem !important; text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    [data-testid="stMetricValue"] {
+        color: #FFFFFF !important; font-size: 1.6rem !important; font-weight: 700 !important;
+    }
+    [data-testid="stDataFrame"] {
+        border: 1px solid rgba(0,191,255,0.25); border-radius: 10px; overflow: hidden;
+    }
+    [data-testid="stExpander"] {
+        background: rgba(0,191,255,0.07); border: 1px solid rgba(0,191,255,0.2);
+        border-radius: 10px;
+    }
+    .insight-box {
+        background: linear-gradient(90deg, rgba(0,191,255,0.12), rgba(125,249,255,0.05));
+        border-left: 4px solid #00BFFF; padding: 12px 18px; border-radius: 8px;
+        margin: 8px 0; color: #E0E0E0 !important; font-size: 0.92rem;
+        box-shadow: 0 2px 12px rgba(0,191,255,0.1);
+    }
+    hr { border: none; height: 1px;
+         background: linear-gradient(90deg, transparent, #00BFFF, #FF6EC7, transparent);
+         margin: 1.5rem 0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    ::-webkit-scrollbar-thumb { background: #00BFFF; border-radius: 3px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -125,7 +193,8 @@ desc = df[num_cols].describe().T
 desc["skewness"] = df[num_cols].skew().round(3)
 desc["kurtosis"] = df[num_cols].kurtosis().round(3)
 desc = desc.round(2)
-st.dataframe(desc, use_container_width=True)
+st.dataframe(desc.style.background_gradient(subset=["mean","std","skewness"],
+             cmap="Blues"), use_container_width=True)
 
 # Correlation Heatmap
 st.subheader("🔗 Correlation Matrix")
@@ -133,7 +202,7 @@ corr = df[num_cols].corr().round(3)
 fig_corr = px.imshow(corr, text_auto=True, color_continuous_scale="RdYlGn",
                      zmin=-1, zmax=1, aspect="auto",
                      title="Correlation Heatmap of Numeric Variables")
-fig_corr.update_layout(title_font_size=16, height=500)
+fig_corr.update_layout(title_font_size=16, height=500, template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig_corr, use_container_width=True)
 
 with st.expander("💡 Correlation Insight"):
