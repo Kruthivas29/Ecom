@@ -125,8 +125,7 @@ desc = df[num_cols].describe().T
 desc["skewness"] = df[num_cols].skew().round(3)
 desc["kurtosis"] = df[num_cols].kurtosis().round(3)
 desc = desc.round(2)
-st.dataframe(desc.style.background_gradient(subset=["mean","std","skewness"],
-             cmap="Blues"), use_container_width=True)
+st.dataframe(desc, use_container_width=True)
 
 # Correlation Heatmap
 st.subheader("🔗 Correlation Matrix")
